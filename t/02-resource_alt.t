@@ -21,6 +21,7 @@ plan tests => 9;
     set serialzier => 'JSON';
 
     resource 'user(s)' => (
+        'altsyntax' => 1,
         'index'  => \&on_index_users,
         'read'   => \&on_read_user,
         'create' => \&on_create_user,
@@ -42,7 +43,7 @@ plan tests => 9;
 
     sub on_create_user {
         my $id = ++$last_id;
-        my $user = params('body');
+        my $user = params('query');
         $user->{id} = $id;
         $users->{$id} = $user;
 
@@ -61,7 +62,7 @@ plan tests => 9;
         my $user = $users->{$id};
         return { user => undef } unless defined $user;
 
-        $users->{$id} = { %$user, %{params('body')} };
+        $users->{$id} = { %$user, %{params('query')} };
         { user => $users->{$id} };
     }
 
@@ -69,24 +70,24 @@ plan tests => 9;
 
 use Dancer::Test;
 
-my $r = dancer_response(GET => '/users.json');
+my $r = dancer_response(GET => '/users/index.json');
 is_deeply $r->{content}, { users => {} },
     "no users defined";
 
-$r = dancer_response(GET => '/user/1.json');
+$r = dancer_response(GET => '/user/1/read.json');
 is_deeply $r->{content}, {user => undef},
     "user 1 is not defined";
 
-$r = dancer_response(POST => '/user.json', { body => {name => 'Foo' }});
+$r = dancer_response(GET => '/user/create.json', { params => {name => 'Foo' }});
 is_deeply $r->{content}, { user => { id => 1, name => "Foo" } },
     "create user works";
 
-$r = dancer_response(GET => '/user/1.json');
+$r = dancer_response(GET => '/user/1/read.json');
 is_deeply $r->{content}, {user => { id => 1, name => 'Foo'}},
     "user 1 is defined";
 
-$r = dancer_response(PUT => '/user/1', { 
-    body => {
+$r = dancer_response(GET => '/user/1/update.json', { 
+    params => {
         nick => 'foobar', 
         name => 'Foo Bar' 
     }
@@ -94,23 +95,23 @@ $r = dancer_response(PUT => '/user/1', {
 is_deeply $r->{content}, {user => { id => 1, name => 'Foo Bar', nick => 'foobar'}},
     "user 1 is updated";
 
-$r = dancer_response(DELETE => '/user/1');
+$r = dancer_response(GET => '/user/1/delete.json');
 is_deeply $r->{content}, {user => { id => 1, name => 'Foo Bar', nick => 'foobar'}},
     "user 1 is deleted";
 
-$r = dancer_response(GET => '/user/1');
+$r = dancer_response(GET => '/user/1/read');
 is_deeply $r->{content}, {user => undef},
     "user 1 is not defined";
 
-$r = dancer_response(POST => '/user', { 
-    body => {
+$r = dancer_response(GET => '/user/create', { 
+    params => {
         name => 'John Doe' 
     }
 });
 is_deeply $r->{content}, { user => { id => 2, name => "John Doe" } },
     "id is correctly increased";
 
-$r = dancer_response(GET => '/users');
+$r = dancer_response(GET => '/users/index');
 is_deeply $r->{content}, { users => { 2 => { id => 2, name => "John Doe" } } },
     "users index complete";
 

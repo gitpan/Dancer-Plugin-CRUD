@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use Dancer::ModuleLoader;
 use Test::More import => ['!pass'];
+use Try::Tiny;
 
 # Dancer::Test had a bug in version previous 1.3059_01 that prevent this test
 # from running correctly.
@@ -10,7 +11,13 @@ $dancer_version =~ s/_//g;
 plan skip_all => "Dancer 1.3059_01 is needed for this test (you have $dancer_version)"
   if $dancer_version < 1.305901;
 
-plan tests => 1;
+try {
+    require Validate::Tiny;
+} catch {
+    plan skip_all => "Validate::Tiny is needed for this test";
+};
+
+#plan tests => 1;
 
 {
     package Webservice;
@@ -19,21 +26,24 @@ plan tests => 1;
     use Test::More import => ['!pass'];
     
     set serialzier => 'JSON';
-
-    resource foo => 
-        prefix_id => sub {
-            resource bar =>
-                read => sub {
-                    return { foo => captures->{'foo_id'}, bar => captures->{'bar_id'} }
-                }
-        };
-
+    
+    resource foo =>
+		patch => sub {
+			return scalar captures;
+		},
+	;
 }
 
 use Dancer::Test;
+use Data::Dumper;
 
-my $r = dancer_response(GET => '/foo/123/bar/456');
-is_deeply $r->{content}, { foo => 123, bar => 456 },
-    "UserID is correct";
+plan tests => 1;
 
+my $r;
 
+$r = dancer_response(PATCH => '/foo/123');
+is_deeply $r->{content}, { foo_id => 123 }, 'patch foo ok';
+
+diag sprintf "[%s] %s", $_->{level}, $_->{message} for @{read_logs()};
+
+done_testing;

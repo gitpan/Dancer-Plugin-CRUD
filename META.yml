@@ -20,6 +20,8 @@ no_index:
 requires:
   Dancer: 1.312
   Modern::Perl: 0
+  Sub::Name: 0
   Test::More: 0
   Text::Pluralize: 1.1
-version: 1.01
+  Validate::Tiny: 1.005
+version: 1.03
